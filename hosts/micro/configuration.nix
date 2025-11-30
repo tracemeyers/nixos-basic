@@ -18,7 +18,9 @@
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  networking.hostName = "nixos"; # Define your hostname.
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  networking.hostName = "micro"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -66,13 +68,14 @@
   services.printing.enable = true;
 
   # Enable sound with pipewire.
-  services.pulseaudio.enable = false;
+  #services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
+    wireplumber.enable = true;
+    #alsa.enable = true;
+    #alsa.support32Bit = true;
+    #pulse.enable = true;
     # If you want to use JACK applications, uncomment this
     #jack.enable = true;
 
@@ -119,7 +122,9 @@
       curl
       hyprlauncher
       rustdesk
+      slack
       unstable.chromium
+      unstable.orca-slicer
     ];
 
     programs.bash.enable = true;
@@ -129,12 +134,31 @@
     wayland.windowManager.hyprland.enable = true; # enable Hyprland
     wayland.windowManager.hyprland.settings = {
       "$mod" = "ALT";
+      # https://wiki.hypr.land/Configuring/Dispatchers/
+      bindm = [
+        "$mod, mouse:272, movewindow"
+        "$mod, mouse:273, resizewindow"
+      ];
       bind =
         [
           "$mod, h, movefocus, l"
           "$mod, l, movefocus, r"
           "$mod, k, movefocus, u"
           "$mod, j, movefocus, d"
+          "$mod SHIFT, h, movewindow, l"
+          "$mod SHIFT, l, movewindow, r"
+          "$mod SHIFT, k, movewindow, u"
+          "$mod SHIFT, j, movewindow, d"
+          "$mod, TAB, cyclenext, next"
+          "$mod SHIFT, TAB, cyclenext, prev"
+
+          "$mod, G, togglegroup,"
+          "$mod SUPER, l, changegroupactive, f"
+          "$mod SUPER, h, changegroupactive, b"
+
+          "$mod SHIFT, q, killactive"
+          "$mod SHIFT, s, togglefloating"
+          "$mod, w, fullscreen, 1"
           "$mod, F, exec, firefox"
           "$mod, D, exec, hyprlauncher"
           "$mod, RETURN, exec, konsole"
@@ -152,13 +176,18 @@
             )
             9)
         );
+
       general = {
         gaps_in = 2;
         gaps_out = 2;
       };
+
+      monitor = "HDMI-A-1, 1920x1080, 0x0, 1";
     };
     wayland.windowManager.hyprland.extraConfig = ''
       exec-once = hyprpanel
+      exec-once = hypridle
+      exec-once = dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     '';
 
     programs.hyprpanel = {
@@ -271,6 +300,7 @@
     # https://github.com/JaKooLit/NixOS-Hyprland/blob/main/modules/packages.nix
     hypridle
     hyprpolkitagent
+    xdg-desktop-portal-hyprland
     pyprland
     #uwsm
     hyprlang
@@ -281,6 +311,7 @@
     nwg-look
     wl-clipboard
     hyprland-qt-support # for hyprland-qt-support
+    wireplumber
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -297,10 +328,22 @@
   services.openssh.enable = true;
 
   services.rustdesk-server = {
-    package = true;
-    signal.enable = true;
-    relay.enable = true;
+    enable = true;
+    openFirewall = true;
+
+    # Configuration for the Signal Server (hbbs)
+    signal = {
+      enable = true;
+      relayHosts = [ "192.168.1.187" ];
+    };
+
+    # Configuration for the Relay Server (hbbr)
+    relay = {
+      enable = true;
+    };
   };
+
+  services.hypridle.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
